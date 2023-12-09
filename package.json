@@ -1,0 +1,62 @@
+{
+    "name": "s-nomp",
+    "version": "0.0.9",
+    "description": "zero-proof (Equihash) node stratum mining pool based on NOMP customized for use in Pastel Network",
+    "keywords": [
+        "stratum",
+        "mining",
+        "pool",
+        "server",
+        "poolserver",
+        "equihash",
+        "pastelnetwork"
+    ],
+    "homepage": "https://github.com/pastelnetwork/s-nomp-pastel",
+    "bugs": {
+        "url": "https://github.com/pastelnetwork/s-nomp-pastel/issues"
+    },
+    "license": "MIT",
+    "author": "s-nomp dev team and Pastel Network dev team",
+    "contributors": [
+        "aayanl",
+        "egyptianbman",
+        "Matthew Little",
+        "sennevb",
+        "TheSeven",
+        "vekexasia",
+        "ayk",
+        "Dicklesworthstone"
+    ],
+    "main": "init.js",
+    "bin": {
+        "block-notify": "./scripts/blockNotify.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/pastelnetwork/s-nomp-pastel.git"
+    },
+    "dependencies": {
+        "async": "^3.2.5",
+        "bignum": "^0.13.1",
+        "body-parser": "^1.20.2",
+        "colors": "^1.4.0",
+        "compression": "^1.7.4",
+        "dateformat": "^5.0.3",
+        "dot": "^1.1.3",
+        "express": "^4.18.2",
+        "extend": "^3.0.2",
+        "mysql": "^2.18.1",
+        "node-json-minify": "^3.0.0",
+        "node-watch": "^0.7.4",
+        "nonce": "^1.0.4",
+        "redis": "^4.6.11",
+        "request": "^2.88.2",
+        "stratum-pool": "git+https://github.com/pastelnetwork/node-stratum-pool-pastel.git"
+    },
+    "engines": {
+        "node": "20.10.0"
+    },
+    "scripts": {
+        "start": "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/node_modules/stratum-pool/node_modules/equihashverify/build/Release/:$PWD/node_modules/equihashverify/build/Release/ node init.js"
+    }
+}

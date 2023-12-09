@@ -1,0 +1,16 @@
+{
+    "name": "pastel",
+    "symbol": "psl",
+    "algorithm": "equihash",
+    "overwinter": true,
+    "sapling": true,
+    "requireShielding": false,
+    "peerMagic": "6bdab8fc",
+    "txfee": 0.0004,
+    "subsidyMultipleOfSatoshi": 100000,
+    "explorer": {
+        "txURL": "https://explorer.pastel.network/tx",
+        "blockURL": "https://explorer.pastel.network/block",
+        "_comment_explorer": "https://explorer.pastel.network"
+    }
+}

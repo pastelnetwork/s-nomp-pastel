@@ -1,0 +1,16 @@
+{
+    "name": "pastel testnet",
+    "symbol": "lsp",
+    "algorithm": "equihash",
+    "overwinter": true,
+    "sapling": true,
+    "requireShielding": false,
+    "peerMagic": "38b6fe64",
+    "txfee": 0.0004,
+    "subsidyMultipleOfSatoshi": 100000,
+    "explorer": {
+        "txURL": "",
+        "blockURL": "",
+        "_comment_explorer": ""
+    }
+}

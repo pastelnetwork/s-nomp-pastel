@@ -1,0 +1,6 @@
+config.json
+docker-compose.override.yml
+.idea/
+node_modules/
+pool_configs/*.json
+.vs/
