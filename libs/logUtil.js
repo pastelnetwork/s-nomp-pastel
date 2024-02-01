@@ -61,19 +61,20 @@ class PoolLogger {
             " [" +
             system +
             "]\t";
+        let logString; // Define logString outside the if-else scope
         if (this.logColors) {
             entryDesc = severityToColor(severity, entryDesc);
 
-            let logString = entryDesc + ("[" + component + "] ").italic;
+            logString = entryDesc + ("[" + component + "] ").italic;
             if (subcat) logString += ("(" + subcat + ") ").bold.grey;
             logString += text.grey;
         } else {
-            let logString = entryDesc + "[" + component + "] ";
+            logString = entryDesc + "[" + component + "] ";
             if (subcat) logString += "(" + subcat + ") ";
             logString += text;
         }
 
-        console.log(logString);
+        console.log(logString); // Now logString is accessible here
     }
 }
 
