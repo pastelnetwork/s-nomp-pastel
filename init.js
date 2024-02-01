@@ -102,129 +102,119 @@ function startApplication(logger) {
 
     //Read all pool configs from pool_configs and join them with their coin profile
     var buildPoolConfigs = function () {
-        var configs = {};
-        var configDir = "pool_configs/";
-
-        var poolConfigFiles = [];
-
-        /* Get filenames of pool config json files that are enabled */
-        fs.readdirSync(configDir).forEach(function (file) {
-            if (
-                !fs.existsSync(configDir + file) ||
-                path.extname(configDir + file) !== ".json"
-            )
-                return;
-            var poolOptions = JSON.parse(
-                JSON.minify(
-                    fs.readFileSync(configDir + file, { encoding: "utf8" }),
-                ),
+        return new Promise((resolve, reject) => {
+            var configs = {};
+            var configDir = "pool_configs/";
+            logger.debug(
+                "Master",
+                "PoolSpawner",
+                "Reading pool configurations from: " + configDir,
             );
-            if (!poolOptions.enabled) return;
-            poolOptions.fileName = file;
-            poolConfigFiles.push(poolOptions);
-        });
 
-        /* Ensure no pool uses any of the same ports as another pool */
-        for (var i = 0; i < poolConfigFiles.length; i++) {
-            var ports = Object.keys(poolConfigFiles[i].ports);
-            for (var f = 0; f < poolConfigFiles.length; f++) {
-                if (f === i) continue;
-                var portsF = Object.keys(poolConfigFiles[f].ports);
-                for (var g = 0; g < portsF.length; g++) {
-                    if (ports.indexOf(portsF[g]) !== -1) {
-                        logger.error(
-                            "Master",
-                            poolConfigFiles[f].fileName,
-                            "Has same configured port of " +
-                                portsF[g] +
-                                " as " +
-                                poolConfigFiles[i].fileName,
-                        );
-                        process.exit(1);
-                        return;
-                    }
-                }
-
-                if (poolConfigFiles[f].coin === poolConfigFiles[i].coin) {
+            fs.readdir(configDir, (err, files) => {
+                if (err) {
                     logger.error(
                         "Master",
-                        poolConfigFiles[f].fileName,
-                        "Pool has same configured coin file coins/" +
-                            poolConfigFiles[f].coin +
-                            " as " +
-                            poolConfigFiles[i].fileName +
-                            " pool",
+                        "PoolSpawner",
+                        "Error reading pool_configs directory: " + err,
                     );
-                    process.exit(1);
-                    return;
+                    return reject(err);
                 }
-            }
-        }
 
-        poolConfigFiles.forEach(function (poolOptions) {
-            poolOptions.coinFileName = poolOptions.coin;
-
-            var coinFilePath = "coins/" + poolOptions.coinFileName;
-            if (!fs.existsSync(coinFilePath)) {
-                logger.error(
-                    "Master",
-                    poolOptions.coinFileName,
-                    "could not find file: " + coinFilePath,
-                );
-                return;
-            }
-
-            var coinProfile = JSON.parse(
-                JSON.minify(
-                    fs.readFileSync(coinFilePath, { encoding: "utf8" }),
-                ),
-            );
-            poolOptions.coin = coinProfile;
-            poolOptions.coin.name = poolOptions.coin.name.toLowerCase();
-
-            if (poolOptions.coin.name in configs) {
-                logger.error(
-                    "Master",
-                    poolOptions.fileName,
-                    "coins/" +
-                        poolOptions.coinFileName +
-                        " has same configured coin name " +
-                        poolOptions.coin.name +
-                        " as coins/" +
-                        configs[poolOptions.coin.name].coinFileName +
-                        " used by pool config " +
-                        configs[poolOptions.coin.name].fileName,
+                var poolConfigFiles = files.filter(
+                    (file) => path.extname(file) === ".json",
                 );
 
-                process.exit(1);
-                return;
-            }
+                poolConfigFiles.forEach((file) => {
+                    var filePath = path.join(configDir, file);
+                    try {
+                        var poolOptions = JSON.parse(
+                            JSON.minify(
+                                fs.readFileSync(filePath, { encoding: "utf8" }),
+                            ),
+                        );
+                        if (!poolOptions.enabled) return;
 
-            for (var option in portalConfig.defaultPoolConfigs) {
-                if (!(option in poolOptions)) {
-                    var toCloneOption = portalConfig.defaultPoolConfigs[option];
-                    var clonedOption = {};
-                    if (toCloneOption.constructor === Object)
-                        extend(true, clonedOption, toCloneOption);
-                    else clonedOption = toCloneOption;
-                    poolOptions[option] = clonedOption;
+                        poolOptions.fileName = file;
+                        var coinFilePath = path.join("coins", poolOptions.coin);
+
+                        if (!fs.existsSync(coinFilePath)) {
+                            logger.error(
+                                "Master",
+                                poolOptions.fileName,
+                                "Coin file not found: " + coinFilePath,
+                            );
+                            return;
+                        }
+
+                        var coinProfile = JSON.parse(
+                            JSON.minify(
+                                fs.readFileSync(coinFilePath, {
+                                    encoding: "utf8",
+                                }),
+                            ),
+                        );
+                        poolOptions.coin = coinProfile;
+                        poolOptions.coin.name =
+                            poolOptions.coin.name.toLowerCase();
+
+                        if (poolOptions.coin.name in configs) {
+                            logger.error(
+                                "Master",
+                                poolOptions.fileName,
+                                "Duplicate coin name detected: " +
+                                    poolOptions.coin.name,
+                            );
+                            return reject(
+                                new Error(
+                                    "Duplicate coin name: " +
+                                        poolOptions.coin.name,
+                                ),
+                            );
+                        }
+
+                        // Check for port conflicts
+                        var portsUsed = new Set();
+                        Object.keys(poolOptions.ports || {}).forEach((port) => {
+                            if (portsUsed.has(port)) {
+                                logger.error(
+                                    "Master",
+                                    poolOptions.fileName,
+                                    "Port conflict detected for port: " + port,
+                                );
+                                return reject(
+                                    new Error("Port conflict: " + port),
+                                );
+                            }
+                            portsUsed.add(port);
+                        });
+
+                        configs[poolOptions.coin.name] = poolOptions;
+                    } catch (e) {
+                        logger.error(
+                            "Master",
+                            "PoolSpawner",
+                            `Error processing file ${file}: ${e}`,
+                        );
+                        return reject(e);
+                    }
+                });
+
+                if (Object.keys(configs).length === 0) {
+                    return reject(
+                        new Error("No valid pool configurations found."),
+                    );
                 }
-            }
 
-            configs[poolOptions.coin.name] = poolOptions;
-
-            if (!(coinProfile.algorithm in algos)) {
-                logger.error(
+                logger.debug(
                     "Master",
-                    coinProfile.name,
-                    'Cannot run a pool for unsupported algorithm "' +
-                        coinProfile.algorithm +
-                        '"',
+                    "PoolSpawner",
+                    "Final pool configurations: ",
+                    configs,
                 );
-                delete configs[poolOptions.coin.name];
-            }
+                resolve(configs);
+            });
         });
-        return configs;
     };
 
     function roundTo(n, digits) {
@@ -241,7 +231,6 @@ function startApplication(logger) {
     var _lastShareTimes = [];
 
     var spawnPoolWorkers = function () {
-        var redisConfig;
         var connection;
 
         Object.keys(poolConfigs).forEach(function (coin) {
@@ -254,28 +243,8 @@ function startApplication(logger) {
                 );
                 delete poolConfigs[coin];
             } else if (!connection) {
-                redisConfig = pcfg.redis;
-                connection = CreateRedisClient(redisConfig);
-                if (redisConfig.password != "") {
-                    connection.auth(redisConfig.password);
-                    connection.on("error", function (err) {
-                        logger.error(
-                            "redis",
-                            coin,
-                            "An error occured while attempting to authenticate redis: " +
-                                err,
-                        );
-                    });
-                }
-                connection.on("ready", function () {
-                    logger.debug(
-                        "PPLNT",
-                        coin,
-                        "TimeShare processing setup with redis (" +
-                            connection.snompEndpoint +
-                            ")",
-                    );
-                });
+                connection = CreateRedisClient(pcfg.redis);
+                // Note: Error handling is set up in CreateRedisClient
             }
         });
 
@@ -283,184 +252,165 @@ function startApplication(logger) {
             logger.warning(
                 "Master",
                 "PoolSpawner",
-                "No pool configs exists or are enabled in pool_configs folder. No pools spawned.",
+                "No pool configs exist or are enabled in pool_configs folder. No pools spawned.",
             );
             return;
         }
 
         var serializedConfigs = JSON.stringify(poolConfigs);
+        var numForks =
+            portalConfig.clustering && portalConfig.clustering.enabled
+                ? portalConfig.clustering.forks === "auto"
+                    ? os.cpus().length
+                    : parseInt(portalConfig.clustering.forks) || 1
+                : 1;
 
-        var numForks = (function () {
-            if (!portalConfig.clustering || !portalConfig.clustering.enabled)
-                return 1;
-            if (portalConfig.clustering.forks === "auto")
-                return os.cpus().length;
-            if (
-                !portalConfig.clustering.forks ||
-                isNaN(portalConfig.clustering.forks)
-            )
-                return 1;
-            return portalConfig.clustering.forks;
-        })();
-
-        var poolWorkers = {};
-
-        var createPoolWorker = function (forkId) {
-            var worker = cluster.fork({
-                workerType: "pool",
-                forkId: forkId,
-                pools: serializedConfigs,
-                portalConfig: JSON.stringify(portalConfig),
-            });
-            worker.forkId = forkId;
-            worker.type = "pool";
-            poolWorkers[forkId] = worker;
-            worker
-                .on("exit", function (code, signal) {
-                    logger.error(
-                        "Master",
-                        "PoolSpawner",
-                        "Fork " +
-                            forkId +
-                            " died, spawning replacement worker...",
-                    );
-                    setTimeout(function () {
-                        createPoolWorker(forkId);
-                    }, 2000);
-                })
-                .on("message", function (msg) {
-                    switch (msg.type) {
-                        case "banIP":
-                            Object.keys(cluster.workers).forEach(function (id) {
-                                if (cluster.workers[id].type === "pool") {
-                                    cluster.workers[id].send({
-                                        type: "banIP",
-                                        ip: msg.ip,
-                                    });
-                                }
-                            });
-                            break;
-                        case "shareTrack":
-                            // pplnt time share tracking of workers
-                            if (msg.isValidShare && !msg.isValidBlock) {
-                                var now = Date.now();
-                                var lastShareTime = now;
-                                var lastStartTime = now;
-                                var workerAddress =
-                                    msg.data.worker.split(".")[0];
-
-                                // if needed, initialize PPLNT objects for coin
-                                if (!_lastShareTimes[msg.coin]) {
-                                    _lastShareTimes[msg.coin] = {};
-                                }
-                                if (!_lastStartTimes[msg.coin]) {
-                                    _lastStartTimes[msg.coin] = {};
-                                }
-
-                                // did they just join in this round?
-                                if (
-                                    !_lastShareTimes[msg.coin][workerAddress] ||
-                                    !_lastStartTimes[msg.coin][workerAddress]
-                                ) {
-                                    _lastShareTimes[msg.coin][workerAddress] =
-                                        now;
-                                    _lastStartTimes[msg.coin][workerAddress] =
-                                        now;
-                                    logger.debug(
-                                        "PPLNT",
-                                        msg.coin,
-                                        "Thread " + msg.thread,
-                                        workerAddress + " joined.",
-                                    );
-                                }
-                                // grab last times from memory objects
-                                if (
-                                    _lastShareTimes[msg.coin][workerAddress] !=
-                                        null &&
-                                    _lastShareTimes[msg.coin][workerAddress] > 0
-                                ) {
-                                    lastShareTime =
-                                        _lastShareTimes[msg.coin][
-                                            workerAddress
-                                        ];
-                                    lastStartTime =
-                                        _lastStartTimes[msg.coin][
-                                            workerAddress
-                                        ];
-                                }
-
-                                var redisCommands = [];
-
-                                // if its been less than 15 minutes since last share was submitted
-                                var timeChangeSec = roundTo(
-                                    Math.max(now - lastShareTime, 0) / 1000,
-                                    4,
-                                );
-                                //var timeChangeTotal = roundTo(Math.max(now - lastStartTime, 0) / 1000, 4);
-                                if (timeChangeSec < 900) {
-                                    // loyal miner keeps mining :)
-                                    redisCommands.push([
-                                        "hincrbyfloat",
-                                        msg.coin + ":shares:timesCurrent",
-                                        workerAddress +
-                                            "." +
-                                            poolConfigs[msg.coin].poolId,
-                                        timeChangeSec,
-                                    ]);
-                                    //logger.debug('PPLNT', msg.coin, 'Thread '+msg.thread, workerAddress+':{totalTimeSec:'+timeChangeTotal+', timeChangeSec:'+timeChangeSec+'}');
-                                    connection
-                                        .multi(redisCommands)
-                                        .exec(function (err, replies) {
-                                            if (err)
-                                                logger.error(
-                                                    "PPLNT",
-                                                    msg.coin,
-                                                    "Thread " + msg.thread,
-                                                    "Error with time share processor call to redis " +
-                                                        JSON.stringify(err),
-                                                );
-                                        });
-                                } else {
-                                    // they just re-joined the pool
-                                    _lastStartTimes[workerAddress] = now;
-                                    logger.debug(
-                                        "PPLNT",
-                                        msg.coin,
-                                        "Thread " + msg.thread,
-                                        workerAddress + " re-joined.",
-                                    );
-                                }
-
-                                // track last time share
-                                _lastShareTimes[msg.coin][workerAddress] = now;
-                            }
-                            if (msg.isValidBlock) {
-                                // reset pplnt share times for next round
-                                _lastShareTimes[msg.coin] = {};
-                                _lastStartTimes[msg.coin] = {};
-                            }
-                            break;
-                    }
-                });
-        };
-
-        var i = 0;
-        var spawnInterval = setInterval(function () {
+        for (let i = 0; i < numForks; i++) {
             createPoolWorker(i);
-            i++;
-            if (i === numForks) {
-                clearInterval(spawnInterval);
-                logger.debug(
-                    "Master",
-                    "PoolSpawner",
-                    "Spawned " +
-                        Object.keys(poolConfigs).length +
-                        " pool(s) on " +
-                        numForks +
-                        " thread(s)",
-                );
+        }
+    };
+
+    var serializedConfigs = JSON.stringify(poolConfigs);
+
+    var numForks = (function () {
+        if (!portalConfig.clustering || !portalConfig.clustering.enabled)
+            return 1;
+        if (portalConfig.clustering.forks === "auto") return os.cpus().length;
+        if (
+            !portalConfig.clustering.forks ||
+            isNaN(portalConfig.clustering.forks)
+        )
+            return 1;
+        return portalConfig.clustering.forks;
+    })();
+
+    var poolWorkers = {};
+
+    var createPoolWorker = function (forkId) {
+        var worker = cluster.fork({
+            workerType: "pool",
+            forkId: forkId,
+            pools: serializedConfigs,
+            portalConfig: JSON.stringify(portalConfig),
+        });
+
+        worker.on("exit", function () {
+            logger.error(
+                "Master",
+                "PoolSpawner",
+                "Fork " + forkId + " died, spawning replacement worker...",
+            );
+            setTimeout(function () {
+                createPoolWorker(forkId);
+            }, 2000);
+        });
+
+        worker.on("message", function (msg) {
+            switch (msg.type) {
+                case "banIP":
+                    Object.keys(cluster.workers).forEach(function (id) {
+                        if (cluster.workers[id].type === "pool") {
+                            cluster.workers[id].send({
+                                type: "banIP",
+                                ip: msg.ip,
+                            });
+                        }
+                    });
+                    break;
+                case "shareTrack":
+                    // pplnt time share tracking of workers
+                    if (msg.isValidShare && !msg.isValidBlock) {
+                        var now = Date.now();
+                        var lastShareTime = now;
+                        var lastStartTime = now;
+                        var workerAddress = msg.data.worker.split(".")[0];
+
+                        // if needed, initialize PPLNT objects for coin
+                        if (!_lastShareTimes[msg.coin]) {
+                            _lastShareTimes[msg.coin] = {};
+                        }
+                        if (!_lastStartTimes[msg.coin]) {
+                            _lastStartTimes[msg.coin] = {};
+                        }
+
+                        // did they just join in this round?
+                        if (
+                            !_lastShareTimes[msg.coin][workerAddress] ||
+                            !_lastStartTimes[msg.coin][workerAddress]
+                        ) {
+                            _lastShareTimes[msg.coin][workerAddress] = now;
+                            _lastStartTimes[msg.coin][workerAddress] = now;
+                            logger.debug(
+                                "PPLNT",
+                                msg.coin,
+                                "Thread " + msg.thread,
+                                workerAddress + " joined.",
+                            );
+                        }
+                        // grab last times from memory objects
+                        if (
+                            _lastShareTimes[msg.coin][workerAddress] != null &&
+                            _lastShareTimes[msg.coin][workerAddress] > 0
+                        ) {
+                            lastShareTime =
+                                _lastShareTimes[msg.coin][workerAddress];
+                            lastStartTime =
+                                _lastStartTimes[msg.coin][workerAddress];
+                        }
+
+                        var redisCommands = [];
+
+                        // if its been less than 15 minutes since last share was submitted
+                        var timeChangeSec = roundTo(
+                            Math.max(now - lastShareTime, 0) / 1000,
+                            4,
+                        );
+                        //var timeChangeTotal = roundTo(Math.max(now - lastStartTime, 0) / 1000, 4);
+                        if (timeChangeSec < 900) {
+                            // loyal miner keeps mining :)
+                            redisCommands.push([
+                                "hincrbyfloat",
+                                msg.coin + ":shares:timesCurrent",
+                                workerAddress +
+                                    "." +
+                                    poolConfigs[msg.coin].poolId,
+                                timeChangeSec,
+                            ]);
+                            //logger.debug('PPLNT', msg.coin, 'Thread '+msg.thread, workerAddress+':{totalTimeSec:'+timeChangeTotal+', timeChangeSec:'+timeChangeSec+'}');
+                            connection
+                                .multi(redisCommands)
+                                .exec(function (err, replies) {
+                                    if (err)
+                                        logger.error(
+                                            "PPLNT",
+                                            msg.coin,
+                                            "Thread " + msg.thread,
+                                            "Error with time share processor call to redis " +
+                                                JSON.stringify(err),
+                                        );
+                                });
+                        } else {
+                            // they just re-joined the pool
+                            _lastStartTimes[workerAddress] = now;
+                            logger.debug(
+                                "PPLNT",
+                                msg.coin,
+                                "Thread " + msg.thread,
+                                workerAddress + " re-joined.",
+                            );
+                        }
+
+                        // track last time share
+                        _lastShareTimes[msg.coin][workerAddress] = now;
+                    }
+                    if (msg.isValidBlock) {
+                        // reset pplnt share times for next round
+                        _lastShareTimes[msg.coin] = {};
+                        _lastStartTimes[msg.coin] = {};
+                    }
+                    break;
             }
-        }, 250);
+        });
     };
 
     var startCliListener = function () {
@@ -667,19 +617,54 @@ function startApplication(logger) {
                 startWebsite(portalConfig, poolConfigs);
             }, 2000);
         });
+
+        buildPoolConfigs()
+            .then((configs) => {
+                poolConfigs = configs; // Assign the loaded configs to the global poolConfigs variable
+                logger.debug(
+                    "Master",
+                    "PoolSpawner",
+                    "Pool configurations loaded successfully.",
+                );
+
+                // Now that poolConfigs is populated, you can spawn pool workers and proceed with other initialization tasks
+
+                var i = 0;
+                var spawnInterval = setInterval(function () {
+                    createPoolWorker(i);
+                    i++;
+                    if (i === numForks) {
+                        clearInterval(spawnInterval);
+                        logger.debug(
+                            "Master",
+                            "PoolSpawner",
+                            "Spawned " +
+                                Object.keys(poolConfigs).length +
+                                " pool(s) on " +
+                                numForks +
+                                " thread(s)",
+                        );
+                    }
+                }, 250);
+
+                spawnPoolWorkers();
+
+                startPaymentProcessor();
+
+                startWebsite();
+
+                startProfitSwitch();
+
+                startCliListener();
+            })
+            .catch((error) => {
+                // Handle errors that occurred during pool configuration loading
+                logger.error(
+                    "Master",
+                    "PoolSpawner",
+                    "Failed to load pool configurations: " + error,
+                );
+                // Consider exiting or handling the error gracefully here
+            });
     };
-
-    (function init() {
-        poolConfigs = buildPoolConfigs();
-
-        spawnPoolWorkers();
-
-        startPaymentProcessor();
-
-        startWebsite();
-
-        startProfitSwitch();
-
-        startCliListener();
-    })();
 }
