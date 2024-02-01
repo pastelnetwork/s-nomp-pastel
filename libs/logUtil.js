@@ -1,16 +1,15 @@
-var dateFormat = require('dateformat');
-var colors = require('colors');
+const colors = require("colors");
 
-
-var severityToColor = function(severity, text) {
-    switch(severity) {
-        case 'special':
+// Define severity to color mapping and severity values
+const severityToColor = function (severity, text) {
+    switch (severity) {
+        case "special":
             return text.cyan.underline;
-        case 'debug':
+        case "debug":
             return text.green;
-        case 'warning':
+        case "warning":
             return text.yellow;
-        case 'error':
+        case "error":
             return text.red;
         default:
             console.log("Unknown severity " + severity);
@@ -18,72 +17,64 @@ var severityToColor = function(severity, text) {
     }
 };
 
-var severityValues = {
-    'debug': 1,
-    'warning': 2,
-    'error': 3,
-    'special': 4
+const severityValues = {
+    debug: 1,
+    warning: 2,
+    error: 3,
+    special: 4,
 };
 
+// Asynchronously initializes the PoolLogger with dynamic import for dateFormat
+async function initializeLogger(configuration) {
+    const dateFormat = (await import("dateformat")).default;
+    return new PoolLogger(configuration, dateFormat);
+}
 
-var PoolLogger = function (configuration) {
+class PoolLogger {
+    constructor(configuration, dateFormat) {
+        this.configuration = configuration;
+        this.dateFormat = dateFormat;
+        this.logLevelInt = severityValues[configuration.logLevel];
+        this.logColors = configuration.logColors;
 
+        // Dynamically create logging methods for each severity level
+        Object.keys(severityValues).forEach((logType) => {
+            this[logType] = (...args) => {
+                args.unshift(logType);
+                this.log.apply(this, args);
+            };
+        });
+    }
 
-    var logLevelInt = severityValues[configuration.logLevel];
-    var logColors = configuration.logColors;
+    log(severity, system, component, text, subcat) {
+        if (severityValues[severity] < this.logLevelInt) return;
 
-
-
-    var log = function(severity, system, component, text, subcat) {
-
-        if (severityValues[severity] < logLevelInt) return;
-
-        if (subcat){
-            var realText = subcat;
-            var realSubCat = text;
+        if (subcat) {
+            let realText = subcat;
+            let realSubCat = text;
             text = realText;
             subcat = realSubCat;
         }
 
-        var entryDesc = dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss') + ' [' + system + ']\t';
-        if (logColors) {
+        let entryDesc =
+            this.dateFormat(new Date(), "yyyy-mm-dd HH:MM:ss") +
+            " [" +
+            system +
+            "]\t";
+        if (this.logColors) {
             entryDesc = severityToColor(severity, entryDesc);
 
-            var logString =
-                    entryDesc +
-                    ('[' + component + '] ').italic;
-
-            if (subcat)
-                logString += ('(' + subcat + ') ').bold.grey;
-
+            let logString = entryDesc + ("[" + component + "] ").italic;
+            if (subcat) logString += ("(" + subcat + ") ").bold.grey;
             logString += text.grey;
-        }
-        else {
-            var logString =
-                    entryDesc +
-                    '[' + component + '] ';
-
-            if (subcat)
-                logString += '(' + subcat + ') ';
-
+        } else {
+            let logString = entryDesc + "[" + component + "] ";
+            if (subcat) logString += "(" + subcat + ") ";
             logString += text;
         }
 
         console.log(logString);
+    }
+}
 
-
-    };
-
-    // public
-
-    var _this = this;
-    Object.keys(severityValues).forEach(function(logType){
-        _this[logType] = function(){
-            var args = Array.prototype.slice.call(arguments, 0);
-            args.unshift(logType);
-            log.apply(this, args);
-        };
-    });
-};
-
-module.exports = PoolLogger;
+module.exports = initializeLogger;

@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [{
+        "type": "node",
+        "request": "launch",
+        "name": "Debug S-Nomp",
+        "skipFiles": ["<node_internals>/**"],
+        "program": "${workspaceFolder}/init.js",
+        "env": {
+            "LD_LIBRARY_PATH": "${workspaceFolder}/node_modules/stratum-pool/node_modules/equihashverify/build/Release/:${env:LD_LIBRARY_PATH}"
+        },
+        "outFiles": ["${workspaceFolder}/**/*.js"],
+        "console": "integratedTerminal"
+    }]
+}
