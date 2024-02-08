@@ -4,3 +4,7 @@ docker-compose.override.yml
 node_modules/
 pool_configs/*.json
 .vs/
+old_logs/
+logs/
+package-lock.json
+.env
