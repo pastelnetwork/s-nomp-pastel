@@ -8,4 +8,19 @@
             "<node_internals>/**"
         ]
     },
+    "terminal.integrated.shellArgs.osx": [
+        "-l",
+        "-c",
+        "nvm use"
+    ],
+    "terminal.integrated.shellArgs.linux": [
+        "-l",
+        "-c",
+        "nvm use"
+    ],
+    "terminal.integrated.shellArgs.windows": [
+        "-l",
+        "-c",
+        "nvm use"
+    ],
 }

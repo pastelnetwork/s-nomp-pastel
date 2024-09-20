@@ -1,6 +1,6 @@
 {
     "name": "s-nomp",
-    "version": "0.0.9",
+    "version": "0.0.11",
     "description": "zero-proof (Equihash) node stratum mining pool based on NOMP customized for use in Pastel Network",
     "keywords": [
         "stratum",
@@ -56,7 +56,7 @@
         "stratum-pool": "git+https://github.com/pastelnetwork/node-stratum-pool-pastel.git"
     },
     "engines": {
-        "node": "20.10.0"
+        "node": ">=20.10.0 <=20.17.0"
     },
     "scripts": {
         "start": "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/node_modules/stratum-pool/node_modules/equihashverify/build/Release/:$PWD/node_modules/equihashverify/build/Release/ node init.js",

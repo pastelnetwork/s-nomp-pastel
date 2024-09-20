@@ -1,10 +1,11 @@
-var Stratum = require("stratum-pool");
-var redis = require("redis");
-var net = require("net");
+// poolWorker.js
 
-var MposCompatibility = require("./mposCompatibility.js");
-var ShareProcessor = require("./shareProcessor.js");
-var CreateRedisClient = require("./createRedisClient.js");
+const Stratum = require("stratum-pool");
+const net = require("net");
+
+const MposCompatibility = require("./mposCompatibility.js");
+const ShareProcessor = require("./shareProcessor.js");
+const CreateRedisClient = require("./createRedisClient.js");
 
 module.exports = function (logger) {
     var _this = this;
@@ -69,7 +70,7 @@ module.exports = function (logger) {
                         logComponent,
                         logSubCat,
                         "Switch message would have no effect - ignoring " +
-                            newCoin,
+                        newCoin,
                     );
                     break;
                 }
@@ -79,11 +80,11 @@ module.exports = function (logger) {
                     logComponent,
                     logSubCat,
                     "Proxy message for " +
-                        algo +
-                        " from " +
-                        oldCoin +
-                        " to " +
-                        newCoin,
+                    algo +
+                    " from " +
+                    oldCoin +
+                    " to " +
+                    newCoin,
                 );
 
                 if (newPool) {
@@ -113,7 +114,7 @@ module.exports = function (logger) {
                                     logComponent,
                                     logSubCat,
                                     "Redis error writing proxy config: " +
-                                        JSON.stringify(err),
+                                    JSON.stringify(err),
                                 );
                             } else {
                                 logger.debug(
@@ -121,7 +122,7 @@ module.exports = function (logger) {
                                     logComponent,
                                     logSubCat,
                                     "Last proxy state saved to redis for " +
-                                        algo,
+                                    algo,
                                 );
                             }
                         },
@@ -139,9 +140,9 @@ module.exports = function (logger) {
         var logSubCat = "Thread " + (parseInt(forkId) + 1);
 
         var handlers = {
-            auth: function () {},
-            share: function () {},
-            diff: function () {},
+            auth: function () { },
+            share: function () { },
+            diff: function () { },
         };
 
         //Functions required for MPOS compatibility
@@ -205,13 +206,13 @@ module.exports = function (logger) {
                 logSystem,
                 logComponent,
                 logSubCat,
-                "Using password field for " +
-                    password +
-                    " for " +
-                    workerName +
-                    " [" +
-                    ip +
-                    "]",
+                "Using password field '" +
+                password +
+                "' for " +
+                workerName +
+                " [" +
+                ip +
+                "]",
             );
 
             // Call the callback with a successful authorization result
@@ -232,7 +233,7 @@ module.exports = function (logger) {
                     logComponent,
                     logSubCat,
                     "We thought a block was found but it was rejected by the daemon, share data: " +
-                        shareData,
+                    shareData,
                 );
             else if (isValidBlock)
                 logger.debug(
@@ -287,9 +288,9 @@ module.exports = function (logger) {
                     logComponent,
                     logSubCat,
                     "Difficulty update to diff " +
-                        diff +
-                        " workerName=" +
-                        JSON.stringify(workerName),
+                    diff +
+                    " workerName=" +
+                    JSON.stringify(workerName),
                 );
                 handlers.diff(workerName, diff);
             })
@@ -379,13 +380,13 @@ module.exports = function (logger) {
                                     "Connect",
                                     logSubCat,
                                     "Connection to " +
-                                        switchName +
-                                        " from " +
-                                        socket.remoteAddress +
-                                        " on " +
-                                        port +
-                                        " routing to " +
-                                        currentPool,
+                                    switchName +
+                                    " from " +
+                                    socket.remoteAddress +
+                                    " on " +
+                                    port +
+                                    " routing to " +
+                                    currentPool,
                                 );
 
                                 if (pools[currentPool])
@@ -403,13 +404,13 @@ module.exports = function (logger) {
                                     logComponent,
                                     logSubCat,
                                     'Switching "' +
-                                        switchName +
-                                        '" listening for ' +
-                                        algorithm +
-                                        " on port " +
-                                        port +
-                                        " into " +
-                                        proxySwitch[switchName].currentPool,
+                                    switchName +
+                                    '" listening for ' +
+                                    algorithm +
+                                    " on port " +
+                                    port +
+                                    " into " +
+                                    proxySwitch[switchName].currentPool,
                                 );
                             });
                         proxySwitch[switchName].servers.push(f);
@@ -441,28 +442,30 @@ module.exports = function (logger) {
             "Setting proxy difficulties after pool start",
         );
 
-        Object.keys(portalConfig.switching).forEach(function (switchName) {
-            if (!portalConfig.switching[switchName].enabled) return;
+        if (portalConfig.switching) {
+            Object.keys(portalConfig.switching).forEach(function (switchName) {
+                if (!portalConfig.switching[switchName].enabled) return;
 
-            var switchAlgo = portalConfig.switching[switchName].algorithm;
-            if (pool.options.coin.algorithm !== switchAlgo) return;
+                var switchAlgo = portalConfig.switching[switchName].algorithm;
+                if (pool.options.coin.algorithm !== switchAlgo) return;
 
-            // we know the switch configuration matches the pool's algo, so setup the diff and
-            // vardiff for each of the switch's ports
-            for (var port in portalConfig.switching[switchName].ports) {
-                if (portalConfig.switching[switchName].ports[port].varDiff)
-                    pool.setVarDiff(
-                        port,
-                        portalConfig.switching[switchName].ports[port].varDiff,
-                    );
+                // we know the switch configuration matches the pool's algo, so setup the diff and
+                // vardiff for each of the switch's ports
+                for (var port in portalConfig.switching[switchName].ports) {
+                    if (portalConfig.switching[switchName].ports[port].varDiff)
+                        pool.setVarDiff(
+                            port,
+                            portalConfig.switching[switchName].ports[port].varDiff,
+                        );
 
-                if (portalConfig.switching[switchName].ports[port].diff) {
-                    if (!pool.options.ports.hasOwnProperty(port))
-                        pool.options.ports[port] = {};
-                    pool.options.ports[port].diff =
-                        portalConfig.switching[switchName].ports[port].diff;
+                    if (portalConfig.switching[switchName].ports[port].diff) {
+                        if (!pool.options.ports.hasOwnProperty(port))
+                            pool.options.ports[port] = {};
+                        pool.options.ports[port].diff =
+                            portalConfig.switching[switchName].ports[port].diff;
+                    }
                 }
-            }
-        });
+            });
+        };
     };
 };

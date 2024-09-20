@@ -1,0 +1,16 @@
+{
+    "name": "pastel devnet",
+    "symbol": "dev",
+    "algorithm": "equihash",
+    "overwinter": true,
+    "sapling": true,
+    "requireShielding": false,
+    "peerMagic": "8fabc1d2",
+    "txfee": 0.0004,
+    "subsidyMultipleOfSatoshi": 100000,
+    "explorer": {
+        "txURL": "",
+        "blockURL": "",
+        "_comment_explorer": ""
+    }
+}
