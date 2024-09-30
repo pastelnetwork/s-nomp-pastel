@@ -1,10 +1,12 @@
-config.json
-docker-compose.override.yml
 .idea/
+.vs/
 node_modules/
 pool_configs/*.json
-.vs/
 old_logs/
 logs/
+docker/files/pasteld/
+docker/files/mining_block_supernode_validator/
 package-lock.json
 .env
+/config.json
+docker-compose.override.yml

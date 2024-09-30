@@ -1,0 +1,79 @@
+{
+    "enabled": false,
+    "coin": "psl.json",
+    "coinNetworkType": "mainnet",
+    "coinDaemonDirectory": "~/.pastel",
+
+    "address": "",
+    "_comment_address": "a transparent address to send coinbase rewards to",
+
+    "zAddress": "",
+    "_comment_zAddress": "a private address used to send coins to tAddress.",
+
+    "tAddress": "",
+    "_comment_tAddress": "transparent address used to send payments, make this a different address, otherwise payments will not send",
+    "walletInterval": 1.5,
+    "_comment_walletInterval": "Used to cache coin stats",
+    "rewardRecipients": {
+    },
+    "tlsOptions": {
+        "enabled": false,
+        "serverKey": "",
+        "serverCert": "",
+        "ca": ""
+    },
+    "paymentProcessing": {
+        "enabled": true,
+        "minConf": 10,
+        "paymentMode": "prop",
+        "_comment_paymentMode": "prop, pplnt",
+        "paymentInterval": 120,
+        "minimumPayment": 0.1,
+        "maxBlocksPerPayment": 3,
+        "daemon": {
+            "host": "127.0.0.1",
+            "port": 9932,
+            "user": "",
+            "password": ""
+        }
+    },
+    "ports": {
+        "3255": {
+            "tls": false,
+            "diff": 5,
+            "varDiff": {
+                "minDiff": 5,
+                "maxDiff": 50,
+                "targetTime": 15,
+                "retargetTime": 90,
+                "variancePercent": 30
+            }
+        }
+    },
+    "poolId": "main",
+    "_comment_poolId": "use it for region identification: eu, us, asia or keep default if you have one stratum instance for one coin",
+    "daemons": [
+        {
+            "host": "127.0.0.1",
+            "port": 9932,
+            "user": "",
+            "password": ""
+        }
+    ],
+    "p2p": {
+        "enabled": false,
+        "host": "127.0.0.1",
+        "port": 9933,
+        "disableTransactions": true
+    },
+    "mposMode": {
+        "enabled": false,
+        "host": "127.0.0.1",
+        "port": 3306,
+        "user": "me",
+        "password": "mypass",
+        "database": "psl",
+        "checkPassword": true,
+        "autoCreateWorker": false
+    }
+}
